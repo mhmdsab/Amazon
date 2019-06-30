@@ -8,15 +8,13 @@ from nltk import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer,WordNetLemmatizer
 from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.metrics import confusion_matrix
 
 #import data
 data = pd.read_pickle('Amazon_Unlocked_Mobile.pickle')
 data = data[['Reviews','Rating']]
-#data = shuffle(data)
-data = data.head(4000)
 
 #drop nan values
 data.dropna(inplace = True)
@@ -31,28 +29,28 @@ for c in punctuation:
 
 
 #removing stop words & stemming words
-##review_array = np.array(data['Reviews'])
-##corpus = []
-##stop_words = set(stopwords.words('english'))
-##ps = PorterStemmer()
-##
-##for i in range(len(data)):
-##    review = review_array[i]
-##    review = word_tokenize(review)
-##    review = [w for w in review if not w in stop_words]
-##    review = [ps.stem(w) for w in review]
-##    review = ' '.join(review)
-##    corpus.append(review)
+review_array = np.array(data['Reviews'])
+corpus = []
+stop_words = set(stopwords.words('english'))
+ps = PorterStemmer()
+
+for i in range(len(data)):
+    review = review_array[i]
+    review = word_tokenize(review)
+    review = [w for w in review if not w in stop_words]
+    review = [ps.stem(w) for w in review]
+    review = ' '.join(review)
+    corpus.append(review)
    
 
 #creating feature matrices
-cv = CountVectorizer(min_df = 5,ngram_range = (1,2))
-X = cv.fit_transform(data['Reviews']).toarray()
+cv = TfidfVectorizer(min_df = 15,ngram_range = (1,10))
+X = cv.fit_transform(np.array(corpus))
 y = data['Rating'].values
 
 
 #cross_validation
-X_train,X_cv,y_train,y_cv = train_test_split(X,y,test_size = 0.2)
+X_train,X_cv,y_train,y_cv = train_test_split(X,y,test_size = 0.1)
 
 #fit the model
 clf = MultinomialNB(alpha = 2)
@@ -79,7 +77,12 @@ feature_value_index = clf.coef_[0].argsort()
 print('bottom',feature_names[feature_value_index[:10]])
 print('top',feature_names[feature_value_index[-10:]])
 
+#testing whether the order of words is considered or not
 a = 'not an issue phone is working'
 b = 'an issue phone is not working'
 listt = [a,b]
 print(clf.predict(cv.transform(listt)))
+
+pickling_on = open("clf.pickle","wb")
+pickle.dump(clf, pickling_on)
+pickling_on.close()
